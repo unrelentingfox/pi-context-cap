@@ -1,7 +1,7 @@
 {
 	"name": "pi-context-cap",
-	"version": "0.1.2",
-	"description": "Cap model context windows so pi's built-in auto-compaction fires earlier. Zero-config 200k default for long-context Claude models; configurable for anything else.",
+	"version": "0.2.0",
+	"description": "Cap model context windows so pi's built-in auto-compaction fires earlier, with a /context-cap command for session-local caps.",
 	"keywords": [
 		"pi-package",
 		"pi-extension",
@@ -11,20 +11,31 @@
 		"claude"
 	],
 	"license": "MIT",
-	"author": "Alex Wootton (https://github.com/AlexWootton)",
+	"author": "Alex Wootton (https://github.com/AlexWootton); fork by Dustin Fox",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/AlexWootton/pi-context-cap.git"
+		"url": "git+https://github.com/unrelentingfox/pi-context-cap.git"
 	},
-	"homepage": "https://github.com/AlexWootton/pi-context-cap#readme",
+	"homepage": "https://github.com/unrelentingfox/pi-context-cap#readme",
 	"bugs": {
-		"url": "https://github.com/AlexWootton/pi-context-cap/issues"
+		"url": "https://github.com/unrelentingfox/pi-context-cap/issues"
+	},
+	"type": "module",
+	"scripts": {
+		"test": "node --test test/"
 	},
 	"pi": {
-		"extensions": ["./index.ts"]
+		"extensions": [
+			"./index.ts"
+		]
 	},
-	"files": ["index.ts", "README.md", "LICENSE"],
+	"files": [
+		"index.ts",
+		"caps.ts",
+		"README.md",
+		"LICENSE"
+	],
 	"peerDependencies": {
-		"@mariozechner/pi-coding-agent": "*"
+		"@earendil-works/pi-coding-agent": "*"
 	}
 }
