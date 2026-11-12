@@ -7,7 +7,7 @@
  * trigger does the work.
  *
  * Config: ~/.pi/agent/extensions/context-cap.json, then
- * <cwd>/.pi/extensions/context-cap.json. `/context-cap <tokens>` sets a
+ * <cwd>/.pi/extensions/context-cap.json. `/context-cap <tokens|percent>` sets a
  * session-local cap that overrides config for every model in this session.
  */
 
@@ -18,24 +18,22 @@ import {
 	applyCaps,
 	type CapConfig,
 	DEFAULT_CONFIG,
+	formatSessionCap,
 	formatTokens,
 	nativeWindow,
 	parseCapCommand,
 	resolveCap,
-	UNBOUNDED,
+	type SessionCap,
 } from "./caps.ts";
 
 const ENTRY_TYPE = "context-cap";
-const COMPLETIONS = ["status", "off", "max", "128k", "200k", "272k", "400k", "500k", "1m"];
+const COMPLETIONS = ["status", "off", "max", "50", "75", "128k", "200k", "272k", "400k", "500k", "1m"];
 
-interface SessionCapEntry {
-	cap?: number;
-	max?: boolean;
-}
+type SessionCapEntry = Partial<{ tokens: number; percent: number }>;
 
 export default function (pi: ExtensionAPI) {
 	let cfg: CapConfig = DEFAULT_CONFIG;
-	let sessionCap: number | undefined;
+	let sessionCap: SessionCap | undefined;
 
 	pi.on("session_start", async (_event, ctx) => {
 		cfg = loadConfig(ctx.cwd);
@@ -56,7 +54,7 @@ export default function (pi: ExtensionAPI) {
 	pi.on("message_end", async (_event, ctx) => void apply(ctx));
 
 	pi.registerCommand("context-cap", {
-		description: "Show or set a session-local context-window cap: /context-cap [200k|1m|max|off]",
+		description: "Show or set a session-local context-window cap: /context-cap [50|200k|max|off]",
 		getArgumentCompletions: (prefix) =>
 			COMPLETIONS.filter((value) => value.startsWith(prefix.trim().toLowerCase())).map((value) => ({
 				value,
@@ -75,7 +73,7 @@ export default function (pi: ExtensionAPI) {
 		const command = parseCapCommand(args);
 		if (command.kind !== "status") {
 			sessionCap = command.kind === "set" ? command.cap : undefined;
-			pi.appendEntry<SessionCapEntry>(ENTRY_TYPE, toEntry(sessionCap));
+			pi.appendEntry<SessionCapEntry>(ENTRY_TYPE, sessionCap ?? {});
 		}
 		apply(ctx);
 		ctx.ui.notify(`context-cap: ${describeStatus(ctx)}`, "info");
@@ -90,7 +88,7 @@ export default function (pi: ExtensionAPI) {
 
 	function describeActiveCap(): string {
 		if (sessionCap === undefined) return `config cap ≤ ${formatTokens(cfg.cap)} tokens`;
-		return sessionCap === UNBOUNDED ? "session cap max (native windows)" : `session cap ${formatTokens(sessionCap)} tokens`;
+		return `session cap ${formatSessionCap(sessionCap)}`;
 	}
 
 	function describeStatus(ctx: ExtensionContext): string {
@@ -103,14 +101,14 @@ export default function (pi: ExtensionAPI) {
 			`${model.id}: ${formatTokens(model.contextWindow)} / native ${formatTokens(native)}`,
 		];
 		if (sessionCap !== undefined && configured !== undefined) parts.push(`config ${formatTokens(configured)}`);
-		if (sessionCap !== undefined && sessionCap !== UNBOUNDED && sessionCap > native) {
+		if (sessionCap !== undefined && "tokens" in sessionCap && sessionCap.tokens > native) {
 			parts.push("cap exceeds native window");
 		}
 		return parts.join("; ");
 	}
 }
 
-function restoreSessionCap(ctx: ExtensionContext): number | undefined {
+function restoreSessionCap(ctx: ExtensionContext): SessionCap | undefined {
 	const entries = ctx.sessionManager.getBranch();
 	for (let i = entries.length - 1; i >= 0; i--) {
 		const entry = entries[i];
@@ -121,13 +119,10 @@ function restoreSessionCap(ctx: ExtensionContext): number | undefined {
 	return undefined;
 }
 
-// JSON cannot store Infinity, so "max" is persisted as a flag.
-function toEntry(cap: number | undefined): SessionCapEntry {
-	return cap === UNBOUNDED ? { max: true } : { cap };
-}
-
-function fromEntry(entry: SessionCapEntry | undefined): number | undefined {
-	return entry?.max ? UNBOUNDED : entry?.cap;
+function fromEntry(entry: SessionCapEntry | undefined): SessionCap | undefined {
+	if (entry?.tokens !== undefined) return { tokens: entry.tokens };
+	if (entry?.percent !== undefined) return { percent: entry.percent };
+	return undefined;
 }
 
 function loadConfig(cwd: string): CapConfig {

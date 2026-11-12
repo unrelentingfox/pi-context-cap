@@ -134,7 +134,8 @@ Use `/context-cap` to change the cap for the current session without editing con
 |---|---|
 | `/context-cap` or `/context-cap status` | Show the active cap and the current model's effective and native window. |
 | `/context-cap 128k` | Cap every model at 128,000 tokens in this session. Accepts `200000`, `200,000`, `200k`, `1.5m`. |
-| `/context-cap max` | Remove all caps in this session, so every model uses its native window. |
+| `/context-cap 50` | Cap every model at 50% of its native window. A bare number up to 100, or any number with `%`, is a percentage. |
+| `/context-cap max` | Remove all caps in this session, so every model uses its native window (same as `100`). |
 | `/context-cap off` | Remove the session cap and return to the configured caps. |
 
 A session cap replaces the configured caps (`cap`, `matchPatterns`, and `models`) for every model, so it can also raise a model above its configured cap, up to its native window. The setting is saved as a custom session entry, so it survives `/reload` and resume, follows the active branch in `/tree`, and does not enter model context. Other sessions keep their own setting.
